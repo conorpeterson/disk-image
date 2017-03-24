@@ -1,13 +1,15 @@
-#a means of writing images to the surface of a disk
-###if we had magnetic vision
+# a means of writing images to the surface of a disk
+### (if we had magnetic vision)
 
 -------
 
-everything works right now so i'm making a repo for it
+started reimplementing everything in python. it is MUCH faster.
+refactored old processing code to preprocess images -- quick bitmapping, scaling
 
 -------
 
 TODO
 
-eliminate flaky processing code for python
-art
+refine python pixel sorting -- if pixel black, return hi; etc.
+better docs
+further refine pipeline -- pygame for interaction?? 

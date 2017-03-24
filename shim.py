@@ -6,8 +6,8 @@
 from bitarray import bitarray
 
 filepath = "/home/arden/Dropbox/projects/python/disk-image/disk_image_processing/"
-filename = "2017-3-23-15:39:50-output.img"
-outfile = "test-image.img"
+filename = "2017-3-24-14:44:36-output.img"
+outfile = "selfie.img"
 
 def bitstring_to_byte( string_ ):
 

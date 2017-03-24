@@ -1,0 +1,209 @@
+floppy disk image idea
+
+-------
+
+THESIS
+
+we cannot see the contents of a disk with our eyes; we rely on a certain
+amount of trust in the software and hardware to resolve abstractions into concrete
+objects -- files, images... so i place images literally onto the magnetic 
+platter contained in floppies. they cannot be perceived by human faculties, 
+only transliterated by the mediation of hardware and software, but exist nonetheless
+"potentially witnessed". this illuminates the divide between the form of an object 
+and our conceptual knowledge of it. we can see technology but not know it-- AOL, CompuServ,
+and other internet providers saw themselves at the center of a revolution, but did not
+know how to position themselves in order to survive as dominant forces in their domain
+(for long!! they were very successful). the idea extends itself to current market 
+champions-- how long does facebook survive?? twitter? do they last as long as floppies?
+does software-as-a-service outlast physical media? will SAAS outlast its successor?
+can floppy-distributed SAAS teach us anything about what will come?
+
+
+-------
+
+TECH INFO
+
+
+Basic storage layout:
+(see http://s.hswstatic.com/gif/floppy-disk-track.jpg)
+
+Capacity	Sides	Tracks	Sectors / Track		Bytes / Sector		Tracks/Inch(TPI)
+360 Kb		2		40		9					512					48
+1.2 Mb		2		80		15					512					96
+720 Kb		2		80		9					512					135
+1.44 Mb		2		80		18					512					135
+
+
+
+Details, per http://www.retrotechnology.com/herbs_stuff/drive.html
+
+3.5 inch drives, 720K (1MB) and 1.44M (2MB) and 2.88M (4MB)
+
+	rotation speed: 300 RPM
+
+	track density 135 tpi; 
+	
+	80 tracks per side; IBM MS-DOS sectors per track 9, 18, 36 respectively
+          track 0 on outer circumference, track 79 innermost near hub.
+	
+	head step angle 1.8 degrees
+        data frequency
+                250Kbps, MFM double density DD
+                500Kbps, MFM high density HD
+                1Mbps, ?MFM?? 2.88M extended density ED
+	
+	innermost track bit density: 8717 bpi at 720K; 17,434 bpi at 1.44M; 34,848 at 2.88M
+	          for MFM use; for FM use divide by 2
+	
+	media: cobalt, DD media is 665 oersteds at 720K (1MB? unformatted); longitudinal recording; 
+                     HD media is 720 oersteds at 1.44M (2MB unformatted); longitudinal recording
+               barium ferrite, [unconfirmed 1200 oersteds] at 2.88M (4MB unformatted), perpendicular recording
+	
+	track spacing: .0074 inches 
+	
+	drive track radius from center (inner to outer) 
+                 side 0 .9719 inches to 1.5551 inches
+                 side 1 .9129 inches to 1.4961 inches
+	
+	track width: .115 mm (.0045 inch) after "trim erase" on either side (not confirmed for 4MB format)
+		also see erase notes
+
+
+-------
+
+IMAGE TO BITS SOFTWARE
+
+I.
+	a) import (large!) source image
+	b) dither.
+
+	this will probably have to happen in an "in-memory" canvas due to size
+
+II. 
+	a) figure out where 'rings' lie -- according to physical tracks (80).
+
+		track "weight" -- the line-size of a physical track is width / tracknum
+
+	b) subdivide rings -- according to physical sectors (18 per)
+
+	c) 'trace' sectors -- revealing bits.
+		note that because the media spins at the same rotational velocity,
+		this inner sectors are more dense than the outer sectors.
+		so we'll have to trace rotationally across the image. 
+
+		we will use some trigonometry: we can imagine a line, 
+		whose angle changes at the bit-size step 
+			(bits per byte divided by bytes per sector)
+		and modify its length by the track-size step
+			(tracks per disk, or 80).
+
+		we can then find cartesian coordinates:
+			x = tracknum * weight * cos(bitsizeAngle)
+			y = tracknum * weight * sin(bitsizeAngle)
+
+		and grab image.pixels[x][y].brightness()
+
+		this can all be stored as a 3d array, [80][18][(512*8)], where bit[39][0][0] is the 
+		first bit of the first sector of the 40th track.
+
+		FREQUENCY MODULATION route:
+
+			ones are high and zeroes are low. 
+
+			we just put the bitstream in chunks into a binary-to-byte function and dump that
+			out the other side.
+
+		MODIFIED FREQUENCY MODULATION route:
+
+			bitstream -> closest-fit-byte() -> out
+
+			where closest-fit-byte(bits) reverses the MFM algo.
+			
+			AND THIS IS WHERE I HAVE REACHED MENTAL CAPACITY FOR THE PROBLEM 
+			WITHOUT HAVING THE ACTUAL MEDIA TO PLAY WITH. will resume this later.
+
+
+		this is all assuming we're cool using FM encoding, which might 
+		not be the case with HD disks. 
+
+		good? good.
+
+	d) dump image, bits to files for review
+
+III. 
+	((this is where it gets a little hairy because 
+	i do not know if tracks start at the inside or the outside))
+
+	a) assemble final bitstream by iterating across 3d array per sector:
+		first track, first sector, all bits in order
+		first track, second sector, all bits in order
+		first track, third sector, ...
+		...
+		second track, first sector, ...
+		...
+		last track, last sector, ...
+
+	b) write bitstream to .img file
+
+IV. 
+	(What i am thinking is basically:)
+	`dd if=MEMENTO_MORI.img of=/dev/usb-floppy-drive/`
+
+	HOWEVER. Once we get to this stage we need to start investigating the 
+	type of modulation used to get bits onto the disk.
+
+	FREQUENCY MODULATION is the exact up-or-down bit arrangement that we 
+	think it *should* be, which is what would make the `dd` example work
+
+	but i'm thinking we'll actually encounter
+	MODIFIED FREQUENCY MODULATION. (see ./floppy.pdf)
+
+	the ramifications of MFM means that the data on the disk will not 
+	actually "look like" the image on the disk if we had "magnetic vision",
+	because it encodes bits in half the density of FM. meaning it can put
+	bits in the middle of "cells" instead of at just the beginning of cells. 
+		(again refer to page 7 of floppy.pdf)
+
+	however this is a fairly simple algorithm that we could reimplement and
+	run against the source image (where pixel data becomes a bytestream)
+
+
+	--------------
+
+	I'M THINKING I MAYBE WRITE A PYTHON WRAPPER FOR FDRAWCMD???
+	SEEMS LIKE I COULD DICK AROUND WITH DISKS FOR A WHILE TO GET A HANDLE
+	ON IT AND THEN AUTOMATE, AUTOMATE, AUTOMATE!!!
+
+	http://manpages.ubuntu.com/manpages/xenial/man1/fdrawcmd.1.html
+
+
+
+
+
+------
+
+BITS TO IMAGE
+
+We want to be able to verify all of this data, yeah??? 
+
+Since all of the stuff above is very verbose, i'll be brief:
+we can constitute an image by reading an .IMG file linearly,
+and since we know the geometry of the media we can use some trig 
+to step through bit by bit and set pixel data dark or light depending 
+on the bit, sector, and track working either from the outside in 
+or inside out, and dump that pixel data to .JPG or .BMP or something. 
+
+-------
+
+QUESTIONS TO SOLVE:
+
+what direction does the disk spin? clockwise?
+
+-------
+
+PROBLEMS TO TACKLE:
+
+the image on the disk must be an approximation of the source image.
+we must absolutely implement MFM in order to:
+	a) use the encoding of the time for period accuracy
+	b) actually "draw a knowable image" to the platter in the encoding of the time

@@ -1,0 +1,54 @@
+DISCOVERIES. 
+
+
+Processing seems to write extra bytes to the file -- and i think i know why.
+
+Bits need to be assembled appropriately, in that chars 'emerge' based on bits.
+right now, when we look at the image files in a hex editor, we see lots of zero chars and
+-1 chars because i erroneously thought that java could deduce which byte i needed given a 
+'bit string.'
+
+------
+
+instead, i can just tell processing to dump a list of 0s or 1s. and then i'll make a 
+python shim to turn that big list of bits into a list of bytes, and then i can visualize 
+those bytes in the next program. (dataviz, if it works, or a hex editor, or the actual disk image
+viewer i'm working on.) 
+
+the large file should slim down to about 720kb, or side one of a disk. we'll see.
+
+
+
+-----
+
+SO. PYTHON AGAIN.
+
+This has a nice overview of assembling bitarrays into chars, which we can write to disk 
+as bytes:
+http://stackoverflow.com/questions/10237926/convert-string-to-list-of-bits-and-viceversa
+
+A) PYTHON SHIM
+
+	- read file N.img as f
+	- split f at every space as bytearray
+	- split bytearray at every char as bitarray
+
+	- for every bitarray in bytearray:
+		= derive byte from bits
+		= write byte to new file
+
+B) PYTHON REIMPLEMENTATION
+
+	Do the pixel-finding trig stuff i've already deduced with pyimage or something.
+	Or figure out how to use scipy's image handling stuff. I want speed, dammit!
+	10-minute wait times between tests is killing me. 
+
+	and then tack on the shim (A) to the end, cutting out the middle-man.
+
+	or, here's the real crazy part, i don't have to hold all the 0s and 1s in 
+	memory as strings or ints or whatever while i scan through the image, i just 
+	keep a counter running that %='s 8 and when it == 0, take the last 8 bits, 
+	build a byte, and write it to disk. (or keep it in memory if i'm parallellizing
+	the scan like i have in the processing sketch and dump all bytes at the end) 
+
+	i can reoptimize the code however i like once i'm at this point. 

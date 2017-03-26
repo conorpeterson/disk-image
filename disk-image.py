@@ -9,7 +9,7 @@ from bitarray import bitarray
 filepath = "./disk_image_preprocess/"
 filename = "2017-3-24-16:21:10-output.jpg"
 outpath = "./"
-outfile = "second-test.img"
+outfile = "padded-test.img"
 
 #source image
 image = scipy.misc.imread(filepath + filename, flatten=False, mode='RGB')
@@ -19,7 +19,8 @@ print "image is ", image.shape
 bits_per_byte = 8
 bytes_per_sector = 512
 sectors_per_track = 18
-tracks_per_disk = 80
+tracks_per_disk = 160
+tracks_per_side = 80
 bits_per_track = bits_per_byte * bytes_per_sector * sectors_per_track
 
 #disk geometry in inches
@@ -45,9 +46,9 @@ def bit_at(x,y):
 	# exit()
 
 	if r == 0:
-		return "0"
-	else:
 		return "1"
+	else:
+		return "0"
 
 def bitstring_to_byte( string_ ):
 	# b_ = bitarray()
@@ -68,7 +69,7 @@ if __name__ == "__main__":
 	bitstring = ""
 	b = bitarray() 
 
-	for track_index in range(0, tracks_per_disk):
+	for track_index in range(0, tracks_per_side):
 		track_order = [track_index] + track_order
 
 	print "Stepping through pixels."
@@ -78,13 +79,14 @@ if __name__ == "__main__":
 		print "track ",track_index
 		track_step = track_order[track_index]
 
-		angle = 0.
+		angle = -90.
 
-		for step in range(bits_per_track):
-			angle = map(step, 0, bits_per_track, 0., 360.)
+		#calculate length of segment
+		segment = track_step * track_height;
 
-			#calculate length of segment
-			segment = track_step * track_height;
+
+		for step in range(0, bits_per_track):
+			angle = map(step, 0., float(bits_per_track), float(-90), float(270))
 
 			#calculate location relative to 0,0
 			x = float(radialX(segment, angle))
@@ -101,20 +103,31 @@ if __name__ == "__main__":
 			x += offx;
 			y += offy;
 
-			# print x,",",y
-
 			bit = bit_at(x,y)
-
 			bitstring += bit
+
+			# if step % 3000 == 0:
+			# 	print "x",x,"y",y,"angle",angle,"length",segment
 
 			if step % 8 == 0:
 				bitstring += " "
 
+	#legit half of real working disk
+	realdisk = open("./fat12.img")
+	realdisk.seek(0)
+	#read includes byte 0, so read forward 737279 more.
+	preamble = realdisk.read(737279)
+
 	bitstrings = bitstring.split(" ")
 
+	#write everything to file
 	with open(outpath + outfile, "w") as f:
+
+		print "writing fat12 preamble"
+		f.write(preamble)
+		
+		print "writing significant bytes"
 		for b in bitstrings:
 			f.write( bitstring_to_byte(b))
 
 	print "done!"
-	#write ordered bits as bytes to file
